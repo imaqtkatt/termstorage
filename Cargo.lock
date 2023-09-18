@@ -3,5 +3,12 @@
 version = 3
 
 [[package]]
-name = "termstorage"
+name = "termstorage-protocol"
+version = "0.1.0"
+dependencies = [
+ "termstorage-term",
+]
+
+[[package]]
+name = "termstorage-term"
 version = "0.1.0"

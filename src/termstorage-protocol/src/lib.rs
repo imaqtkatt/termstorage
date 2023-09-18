@@ -1,6 +1,6 @@
 use std::io::{BufReader, BufWriter, Read, Write};
 
-use crate::term::{self, Term};
+use termstorage_term::{self, Term};
 
 #[derive(Debug)]
 pub struct Fetch {
@@ -43,7 +43,7 @@ pub fn encode(prot: Protocol) -> Vec<u8> {
       writer.write(&[TAG_SET]).unwrap();
       write_name(&name, &mut writer);
 
-      let payload = term::encode(&payload);
+      let payload = termstorage_term::encode(&payload);
       let payload_size = payload.len().to_be_bytes();
 
       writer.write(&payload_size).unwrap();
@@ -82,7 +82,7 @@ pub fn decode(slice: &[u8]) -> Option<Protocol> {
       let mut buf_payload = vec![0u8; payload_size];
       reader.read_exact(&mut buf_payload).unwrap();
 
-      let payload = term::decode(&buf_payload)?;
+      let payload = termstorage_term::decode(&buf_payload)?;
 
       let prot = Set { name, payload };
       Some(Protocol::Set(prot))

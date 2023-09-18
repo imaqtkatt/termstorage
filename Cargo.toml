@@ -1,4 +1,6 @@
-[package]
-name = "termstorage"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+resolver = "2"
+members = [
+    "src/termstorage-protocol",
+    "src/termstorage-term",
+]
