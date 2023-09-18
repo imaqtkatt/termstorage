@@ -13,8 +13,8 @@ const TAG_NUMBER: u8 = 21;
 const TAG_STRING: u8 = 22;
 const TAG_TUPLE: u8 = 23;
 
-const NUMBER_LENGTH: usize = 8;
-const USIZE_LENGTH: usize = 8; // What if 32 bit?
+const NUMBER_BYTES: usize = 8;
+const USIZE_BYTES: usize = 8; // What if 32 bit?
 
 /// Encodes the given term ordered by big endianness.
 pub fn encode(term: &Term) -> Vec<u8> {
@@ -79,7 +79,7 @@ fn decode_bool(reader: &mut BufReader<&[u8]>) -> Option<Term> {
 }
 
 fn decode_number(reader: &mut BufReader<&[u8]>) -> Option<Term> {
-  let mut buf = [0u8; NUMBER_LENGTH];
+  let mut buf = [0u8; NUMBER_BYTES];
   reader.read_exact(&mut buf).unwrap();
   let number = f64::from_be_bytes(buf);
 
@@ -87,7 +87,7 @@ fn decode_number(reader: &mut BufReader<&[u8]>) -> Option<Term> {
 }
 
 fn decode_string(reader: &mut BufReader<&[u8]>) -> Option<Term> {
-  let mut buf_usize = [0u8; USIZE_LENGTH];
+  let mut buf_usize = [0u8; USIZE_BYTES];
   reader.read_exact(&mut buf_usize).unwrap();
 
   let str_size = usize::from_be_bytes(buf_usize);

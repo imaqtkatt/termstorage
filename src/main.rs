@@ -1,3 +1,7 @@
+use protocol::{Protocol, Set};
+use term::Term;
+
+pub mod protocol;
 pub mod term;
 
 fn main() {
@@ -15,4 +19,15 @@ fn main() {
   let decoded = term::decode(&encoded);
 
   println!("\n{decoded:?}\n");
+
+  let prot = Protocol::Set(Set {
+    name: "asdf".to_string(),
+    payload: Term::Tuple(Term::Bool(false).into(), Term::Bool(true).into()),
+  });
+
+  let encoded = protocol::encode(prot);
+
+  let decoded = protocol::decode(&encoded);
+
+  println!("{decoded:?}");
 }
