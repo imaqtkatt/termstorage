@@ -1,4 +1,4 @@
-use std::io::{BufReader, Read};
+use std::io::{self, BufReader, BufWriter, Read, Result, Write};
 
 #[derive(Debug)]
 pub enum Term {
@@ -17,48 +17,51 @@ const NUMBER_BYTES: usize = 8;
 const USIZE_BYTES: usize = 8; // What if 32 bit?
 
 /// Encodes the given term ordered by big endianness.
-pub fn encode(term: &Term) -> Vec<u8> {
-  let mut encd = Vec::new();
+pub fn encode(term: &Term) -> Result<Vec<u8>> {
+  let buf = Vec::new();
+
+  let mut writer = BufWriter::new(buf);
 
   match term {
     Term::Bool(b) => {
-      encd.push(TAG_BOOL);
+      writer.write(&[TAG_BOOL])?;
       let byte = u8::from(*b);
-      encd.push(byte);
+      writer.write(&[byte])?;
     }
     Term::Number(n) => {
-      encd.push(TAG_NUMBER);
+      writer.write(&[TAG_NUMBER])?;
       let bytes = n.to_be_bytes();
-      encd.extend_from_slice(&bytes);
+      writer.write(&bytes)?;
     }
     Term::String(s) => {
-      encd.push(TAG_STRING);
+      writer.write(&[TAG_STRING])?;
       // How long strings can be?
       let str_len = s.len().to_be_bytes();
-      encd.extend_from_slice(&str_len);
+      writer.write(&str_len)?;
       let bytes = s.as_bytes();
-      encd.extend_from_slice(bytes);
+      writer.write(bytes)?;
     }
     Term::Tuple(p0, p1) => {
-      encd.push(TAG_TUPLE);
-      let p0 = encode(p0);
-      encd.extend(p0);
-      let p1 = encode(p1);
-      encd.extend(p1);
+      writer.write(&[TAG_TUPLE])?;
+      let p0 = encode(p0)?;
+      writer.write(&p0)?;
+      let p1 = encode(p1)?;
+      writer.write(&p1)?;
     }
   };
 
-  encd
+  let vec = writer.buffer().to_vec();
+  Ok(vec)
 }
 
 /// Decodes the given slice.
-pub fn decode(slice: &[u8]) -> Option<Term> {
+pub fn decode(slice: &[u8]) -> Result<Term> {
   let mut reader = BufReader::new(slice);
 
   do_decode(&mut reader)
 }
 
-fn do_decode(reader: &mut BufReader<&[u8]>) -> Option<Term> {
+fn do_decode(reader: &mut BufReader<&[u8]>) -> Result<Term> {
   let mut buf = [0u8; 1];
   reader.read_exact(&mut buf).unwrap();
 
@@ -67,45 +70,51 @@ fn do_decode(reader: &mut BufReader<&[u8]>) -> Option<Term> {
     TAG_NUMBER => decode_number(reader),
     TAG_STRING => decode_string(reader),
     TAG_TUPLE => decode_tuple(reader),
-    _ => None,
+    _ => {
+      let err = io::Error::new(io::ErrorKind::InvalidData, "Invalid tag");
+      Err(err)
+    }
   }
 }
 
-fn decode_bool(reader: &mut BufReader<&[u8]>) -> Option<Term> {
+fn decode_bool(reader: &mut BufReader<&[u8]>) -> Result<Term> {
   let mut buf = [0u8; 1];
-  reader.read_exact(&mut buf).unwrap();
+  reader.read_exact(&mut buf)?;
 
-  Some(Term::Bool(buf[0] != 0))
+  Ok(Term::Bool(buf[0] != 0))
 }
 
-fn decode_number(reader: &mut BufReader<&[u8]>) -> Option<Term> {
+fn decode_number(reader: &mut BufReader<&[u8]>) -> Result<Term> {
   let mut buf = [0u8; NUMBER_BYTES];
-  reader.read_exact(&mut buf).unwrap();
+  reader.read_exact(&mut buf)?;
   let number = f64::from_be_bytes(buf);
 
-  Some(Term::Number(number))
+  Ok(Term::Number(number))
 }
 
-fn decode_string(reader: &mut BufReader<&[u8]>) -> Option<Term> {
+fn decode_string(reader: &mut BufReader<&[u8]>) -> Result<Term> {
   let mut buf_usize = [0u8; USIZE_BYTES];
-  reader.read_exact(&mut buf_usize).unwrap();
+  reader.read_exact(&mut buf_usize)?;
 
   let str_size = usize::from_be_bytes(buf_usize);
 
   let mut buf = vec![0u8; str_size];
-  reader.read_exact(&mut buf).unwrap();
+  reader.read_exact(&mut buf)?;
 
-  let s = String::from_utf8(buf);
+  let string = String::from_utf8(buf);
 
-  match s {
-    Ok(s) => Some(Term::String(s)),
-    Err(_) => None,
+  match string {
+    Ok(s) => Ok(Term::String(s)),
+    Err(e) => {
+      let err = io::Error::new(io::ErrorKind::InvalidInput, e);
+      Err(err)
+    }
   }
 }
 
-fn decode_tuple(reader: &mut BufReader<&[u8]>) -> Option<Term> {
+fn decode_tuple(reader: &mut BufReader<&[u8]>) -> Result<Term> {
   let p0 = do_decode(reader)?;
   let p1 = do_decode(reader)?;
 
-  Some(Term::Tuple(Box::new(p0), Box::new(p1)))
+  Ok(Term::Tuple(Box::new(p0), Box::new(p1)))
 }
