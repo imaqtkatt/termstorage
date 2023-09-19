@@ -10,5 +10,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "termstorage-server"
+version = "0.1.0"
+dependencies = [
+ "termstorage-protocol",
+ "termstorage-term",
+]
+
+[[package]]
 name = "termstorage-term"
 version = "0.1.0"
