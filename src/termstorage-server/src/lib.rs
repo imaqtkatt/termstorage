@@ -1,17 +1,24 @@
 use std::{
-  io::Read,
-  net::{TcpListener, ToSocketAddrs},
+  collections::HashMap,
+  io::Write,
+  net::{TcpListener, TcpStream, ToSocketAddrs},
   thread,
 };
 
+use termstorage_protocol::{response::Response, Fetch, Protocol};
+use termstorage_term::Term;
+
 pub struct Server {
   listener: TcpListener,
+  storage: HashMap<String, Term>,
 }
 
 impl Server {
   pub fn new<A: ToSocketAddrs>(addr: A) -> Self {
     let listener = TcpListener::bind(addr).unwrap();
-    Self { listener }
+    let storage = Default::default();
+
+    Self { listener, storage }
   }
 }
 
@@ -21,13 +28,10 @@ impl Server {
       for incoming in self.listener.incoming() {
         match incoming {
           Ok(mut stream) => {
-            let mut buf = Vec::new();
-            stream.read_to_end(&mut buf).unwrap();
+            let req = termstorage_protocol::decode(&mut stream);
 
-            let data = termstorage_protocol::decode(&buf);
-
-            match data {
-              Ok(prot) => println!("PROT: {prot:?}"),
+            match req {
+              Ok(prot) => self.handle(&mut stream, prot).unwrap(),
               Err(_) => println!("something bad occurred"),
             };
           }
@@ -35,5 +39,30 @@ impl Server {
         }
       }
     })
+  }
+
+  fn handle(
+    &self,
+    stream: &mut TcpStream,
+    prot: Protocol,
+  ) -> std::io::Result<()> {
+    let resp = match prot {
+      Protocol::Fetch(fetch) => self.handle_fetch(fetch),
+      Protocol::Set(_) => todo!(),
+      Protocol::Delete(_) => todo!(),
+    };
+
+    let encoded_resp = termstorage_protocol::response::encode(resp)?;
+    stream.write(&encoded_resp)?;
+
+    Ok(())
+  }
+
+  fn handle_fetch(&self, Fetch { name }: Fetch) -> Response {
+    let term_opt = self.storage.get(&name).cloned();
+    match term_opt {
+      Some(term) => Response::Ok(term),
+      None => Response::NotFound,
+    }
   }
 }

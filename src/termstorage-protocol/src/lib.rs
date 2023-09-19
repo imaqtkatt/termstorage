@@ -1,4 +1,6 @@
-use std::io::{self, BufReader, BufWriter, Read, Write};
+pub mod response;
+
+use std::io::{self, BufWriter, Read, Write};
 
 use std::io::Result;
 
@@ -62,22 +64,22 @@ pub fn encode(prot: Protocol) -> Result<Vec<u8>> {
   Ok(vec)
 }
 
-/// Decodes the given slice.
-pub fn decode(slice: &[u8]) -> Result<Protocol> {
-  let mut reader = BufReader::new(slice);
+/// Decodes a Protocol with the given reader.
+pub fn decode(reader: &mut impl Read) -> Result<Protocol> {
+  // let mut reader = BufReader::new(slice);
 
   let mut buf = [0u8; 1];
   reader.read_exact(&mut buf)?;
 
   match buf[0] {
     TAG_FETCH => {
-      let name = read_name(&mut reader)?;
+      let name = read_name(reader)?;
 
       let prot = Protocol::Fetch(Fetch { name });
       Ok(prot)
     }
     TAG_SET => {
-      let name = read_name(&mut reader)?;
+      let name = read_name(reader)?;
 
       let mut buf_payload_size = [0u8; 8];
       reader.read_exact(&mut buf_payload_size)?;
@@ -93,7 +95,7 @@ pub fn decode(slice: &[u8]) -> Result<Protocol> {
       Ok(Protocol::Set(prot))
     }
     TAG_DELETE => {
-      let name = read_name(&mut reader)?;
+      let name = read_name(reader)?;
       let prot = Protocol::Delete(Delete { name });
       Ok(prot)
     }

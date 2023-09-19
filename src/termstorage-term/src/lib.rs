@@ -1,6 +1,6 @@
 use std::io::{self, BufReader, BufWriter, Read, Result, Write};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Term {
   Bool(bool),
   Number(f64),
