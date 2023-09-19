@@ -5,7 +5,7 @@ use std::{
   thread,
 };
 
-use termstorage_protocol::{response::Response, Fetch, Protocol};
+use termstorage_protocol::{response::Response, Delete, Fetch, Protocol, Set};
 use termstorage_term::Term;
 
 pub struct Server {
@@ -23,33 +23,31 @@ impl Server {
 }
 
 impl Server {
-  pub fn start(self) -> thread::JoinHandle<()> {
+  pub fn start(mut self) -> thread::JoinHandle<()> {
     thread::spawn(move || loop {
-      for incoming in self.listener.incoming() {
-        match incoming {
-          Ok(mut stream) => {
-            let req = termstorage_protocol::decode(&mut stream);
-
-            match req {
-              Ok(prot) => self.handle(&mut stream, prot).unwrap(),
-              Err(_) => println!("something bad occurred"),
-            };
-          }
-          Err(_) => {}
+      let accept = self.listener.accept();
+      match accept {
+        Ok((mut stream, _)) => {
+          let req = termstorage_protocol::decode(&mut stream);
+          match req {
+            Ok(prot) => self.handle(&mut stream, prot).unwrap(),
+            Err(_) => self.unprocessed(&mut stream).unwrap(),
+          };
         }
+        Err(_) => {}
       }
     })
   }
 
   fn handle(
-    &self,
+    &mut self,
     stream: &mut TcpStream,
     prot: Protocol,
   ) -> std::io::Result<()> {
     let resp = match prot {
       Protocol::Fetch(fetch) => self.handle_fetch(fetch),
-      Protocol::Set(_) => todo!(),
-      Protocol::Delete(_) => todo!(),
+      Protocol::Set(set) => self.handle_set(set),
+      Protocol::Delete(delete) => self.handle_delete(delete),
     };
 
     let encoded_resp = termstorage_protocol::response::encode(resp)?;
@@ -58,11 +56,28 @@ impl Server {
     Ok(())
   }
 
-  fn handle_fetch(&self, Fetch { name }: Fetch) -> Response {
-    let term_opt = self.storage.get(&name).cloned();
+  fn handle_fetch(&self, Fetch { ref name }: Fetch) -> Response {
+    let term_opt = self.storage.get(name).cloned();
     match term_opt {
       Some(term) => Response::Ok(term),
       None => Response::NotFound,
     }
+  }
+
+  fn handle_set(&mut self, Set { name, payload }: Set) -> Response {
+    self.storage.insert(name, payload);
+    Response::Processed
+  }
+
+  fn handle_delete(&mut self, Delete { ref name }: Delete) -> Response {
+    self.storage.remove(name);
+    Response::Processed
+  }
+
+  fn unprocessed(&self, stream: &mut TcpStream) -> std::io::Result<()> {
+    let resp = termstorage_protocol::response::encode(Response::Unprocessed)?;
+    stream.write(&resp)?;
+
+    Ok(())
   }
 }

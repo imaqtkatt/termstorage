@@ -1,7 +1,8 @@
 use std::{io::Write, net::TcpStream, thread};
 
-use termstorage_protocol::{Fetch, Protocol};
+use termstorage_protocol::{Fetch, Protocol, Set};
 use termstorage_server::Server;
+use termstorage_term::Term;
 
 fn main() {
   println!("Hello, world!");
@@ -11,21 +12,35 @@ fn main() {
   let server_handle = server.start();
 
   let req_handle = thread::spawn(move || {
-    for _ in 0..10 {
-      let req = Protocol::Fetch(Fetch {
-        name: "batata".to_string(),
-      });
+    let req = Protocol::Set(Set {
+      name: "batata".to_string(),
+      payload: Term::Number(42.0),
+    });
 
-      let req = termstorage_protocol::encode(req).unwrap();
+    let req = termstorage_protocol::encode(req).unwrap();
 
-      let mut stream = TcpStream::connect("127.0.0.1:8080").unwrap();
+    let mut stream = TcpStream::connect("127.0.0.1:8080").unwrap();
 
-      stream.write(&req).unwrap();
+    stream.write(&req).unwrap();
 
-      let resp = termstorage_protocol::response::decode(&mut stream).unwrap();
+    let resp = termstorage_protocol::response::decode(&mut stream).unwrap();
+    println!("{resp:?}");
 
-      println!("{resp:?}");
-    }
+    std::mem::drop(stream);
+
+    let req = Protocol::Fetch(Fetch {
+      name: "batata".to_string(),
+    });
+
+    let req = termstorage_protocol::encode(req).unwrap();
+
+    let mut stream = TcpStream::connect("127.0.0.1:8080").unwrap();
+
+    stream.write(&req).unwrap();
+
+    let resp = termstorage_protocol::response::decode(&mut stream).unwrap();
+
+    println!("{resp:?}");
   });
 
   server_handle.join().unwrap();
