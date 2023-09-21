@@ -1,6 +1,7 @@
-use std::{io::Write, net::TcpStream, thread};
+use std::thread;
 
-use termstorage_protocol::{Fetch, Protocol, Set};
+use termstorage_client::Client;
+use termstorage_protocol::{Delete, Fetch, Protocol, Set};
 use termstorage_server::Server;
 use termstorage_term::Term;
 
@@ -11,35 +12,36 @@ fn main() {
 
   let server_handle = server.start();
 
+  let client = Client::new("127.0.0.1:8080");
+
   let req_handle = thread::spawn(move || {
     let req = Protocol::Set(Set {
       name: "batata".to_string(),
-      payload: Term::Number(42.0),
+      payload: Term::String("termstorage works".to_string()),
     });
 
-    let req = termstorage_protocol::encode(req).unwrap();
-
-    let mut stream = TcpStream::connect("127.0.0.1:8080").unwrap();
-
-    stream.write(&req).unwrap();
-
-    let resp = termstorage_protocol::response::decode(&mut stream).unwrap();
+    let resp = client.send(req);
     println!("{resp:?}");
-
-    std::mem::drop(stream);
 
     let req = Protocol::Fetch(Fetch {
       name: "batata".to_string(),
     });
 
-    let req = termstorage_protocol::encode(req).unwrap();
+    let resp = client.send(req);
+    println!("{resp:?}");
 
-    let mut stream = TcpStream::connect("127.0.0.1:8080").unwrap();
+    let req = Protocol::Delete(Delete {
+      name: "batata".to_string(),
+    });
 
-    stream.write(&req).unwrap();
+    let resp = client.send(req);
+    println!("{resp:?}");
 
-    let resp = termstorage_protocol::response::decode(&mut stream).unwrap();
+    let req = Protocol::Fetch(Fetch {
+      name: "batata".to_string(),
+    });
 
+    let resp = client.send(req);
     println!("{resp:?}");
   });
 

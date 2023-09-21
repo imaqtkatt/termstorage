@@ -4,6 +4,7 @@ members = [
     "src/termstorage-protocol",
     "src/termstorage-term",
     "src/termstorage-server",
+    "src/termstorage-client",
 ]
 
 [workspace.dependencies]
