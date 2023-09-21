@@ -1,4 +1,6 @@
-use std::io::{self, BufReader, BufWriter, Read, Result, Write};
+use std::io::{self, BufReader, Read, Result, Write};
+
+use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
 
 #[derive(Debug, Clone)]
 pub enum Term {
@@ -13,48 +15,43 @@ const TAG_NUMBER: u8 = 21;
 const TAG_STRING: u8 = 22;
 const TAG_TUPLE: u8 = 23;
 
-const NUMBER_BYTES: usize = 8;
 const USIZE_BYTES: usize = 8; // What if 32 bit?
 
 /// Encodes the given term ordered by big endianness.
 pub fn encode(term: &Term) -> Result<Vec<u8>> {
-  let buf = Vec::new();
-
-  let mut writer = BufWriter::new(buf);
+  let mut buf = Vec::new();
 
   match term {
     Term::Bool(b) => {
-      writer.write(&[TAG_BOOL])?;
+      buf.write_u8(TAG_BOOL)?;
       let byte = u8::from(*b);
-      writer.write(&[byte])?;
+      buf.write_u8(byte)?;
     }
-    Term::Number(n) => {
-      writer.write(&[TAG_NUMBER])?;
-      let bytes = n.to_be_bytes();
-      writer.write(&bytes)?;
+    &Term::Number(n) => {
+      buf.write_u8(TAG_NUMBER)?;
+      buf.write_f64::<NetworkEndian>(n)?;
     }
     Term::String(s) => {
-      writer.write(&[TAG_STRING])?;
+      buf.write_u8(TAG_STRING)?;
       // How long strings can be?
-      let str_len = s.len().to_be_bytes();
-      writer.write(&str_len)?;
+      let str_len = s.len();
+      buf.write_uint::<NetworkEndian>(str_len as u64, USIZE_BYTES)?;
       let bytes = s.as_bytes();
-      writer.write(bytes)?;
+      buf.write(bytes)?;
     }
     Term::Tuple(p0, p1) => {
-      writer.write(&[TAG_TUPLE])?;
+      buf.write_u8(TAG_TUPLE)?;
       let p0 = encode(p0)?;
-      writer.write(&p0)?;
+      buf.write(&p0)?;
       let p1 = encode(p1)?;
-      writer.write(&p1)?;
+      buf.write(&p1)?;
     }
   };
 
-  let vec = writer.buffer().to_vec();
-  Ok(vec)
+  Ok(buf)
 }
 
-/// Decodes the given slice.
+/// Decodes the given slice to a term.
 pub fn decode(slice: &[u8]) -> Result<Term> {
   let mut reader = BufReader::new(slice);
 
@@ -62,10 +59,9 @@ pub fn decode(slice: &[u8]) -> Result<Term> {
 }
 
 fn do_decode(reader: &mut BufReader<&[u8]>) -> Result<Term> {
-  let mut buf = [0u8; 1];
-  reader.read_exact(&mut buf).unwrap();
+  let tag = reader.read_u8()?;
 
-  match buf[0] {
+  match tag {
     TAG_BOOL => decode_bool(reader),
     TAG_NUMBER => decode_number(reader),
     TAG_STRING => decode_string(reader),
@@ -78,27 +74,21 @@ fn do_decode(reader: &mut BufReader<&[u8]>) -> Result<Term> {
 }
 
 fn decode_bool(reader: &mut BufReader<&[u8]>) -> Result<Term> {
-  let mut buf = [0u8; 1];
-  reader.read_exact(&mut buf)?;
+  let bool = reader.read_u8()?;
 
-  Ok(Term::Bool(buf[0] != 0))
+  Ok(Term::Bool(bool != 0))
 }
 
 fn decode_number(reader: &mut BufReader<&[u8]>) -> Result<Term> {
-  let mut buf = [0u8; NUMBER_BYTES];
-  reader.read_exact(&mut buf)?;
-  let number = f64::from_be_bytes(buf);
+  let number = reader.read_f64::<NetworkEndian>()?;
 
   Ok(Term::Number(number))
 }
 
 fn decode_string(reader: &mut BufReader<&[u8]>) -> Result<Term> {
-  let mut buf_usize = [0u8; USIZE_BYTES];
-  reader.read_exact(&mut buf_usize)?;
+  let str_size = reader.read_uint::<NetworkEndian>(USIZE_BYTES)?;
 
-  let str_size = usize::from_be_bytes(buf_usize);
-
-  let mut buf = vec![0u8; str_size];
+  let mut buf = vec![0u8; str_size as usize];
   reader.read_exact(&mut buf)?;
 
   let string = String::from_utf8(buf);

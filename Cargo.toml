@@ -5,3 +5,6 @@ members = [
     "src/termstorage-term",
     "src/termstorage-server",
 ]
+
+[workspace.dependencies]
+byteorder = "1.4.3"
