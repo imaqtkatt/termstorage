@@ -19,6 +19,7 @@ dependencies = [
 name = "termstorage-protocol"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "termstorage-term",
 ]
 
