@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 byteorder = { workspace = true }
+termstorage-encoding = { path = "../termstorage-encoding" }

@@ -1,6 +1,7 @@
-use std::io::{self, BufReader, Read, Result, Write};
+use std::io::{self, Read, Result, Write};
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
+use termstorage_encoding::{Decode, Encode};
 
 #[derive(Debug, Clone)]
 pub enum Term {
@@ -51,14 +52,14 @@ pub fn encode(term: &Term) -> Result<Vec<u8>> {
   Ok(buf)
 }
 
-/// Decodes the given slice to a term.
-pub fn decode(slice: &[u8]) -> Result<Term> {
-  let mut reader = BufReader::new(slice);
+// /// Decodes the given slice to a term.
+// pub fn decode(slice: &[u8]) -> Result<Term> {
+//   let mut reader = BufReader::new(slice);
 
-  do_decode(&mut reader)
-}
+//   do_decode(&mut reader)
+// }
 
-fn do_decode(reader: &mut BufReader<&[u8]>) -> Result<Term> {
+fn do_decode(reader: &mut impl Read) -> Result<Term> {
   let tag = reader.read_u8()?;
 
   match tag {
@@ -73,19 +74,19 @@ fn do_decode(reader: &mut BufReader<&[u8]>) -> Result<Term> {
   }
 }
 
-fn decode_bool(reader: &mut BufReader<&[u8]>) -> Result<Term> {
+fn decode_bool(reader: &mut impl Read) -> Result<Term> {
   let bool = reader.read_u8()?;
 
   Ok(Term::Bool(bool != 0))
 }
 
-fn decode_number(reader: &mut BufReader<&[u8]>) -> Result<Term> {
+fn decode_number(reader: &mut impl Read) -> Result<Term> {
   let number = reader.read_f64::<NetworkEndian>()?;
 
   Ok(Term::Number(number))
 }
 
-fn decode_string(reader: &mut BufReader<&[u8]>) -> Result<Term> {
+fn decode_string(reader: &mut impl Read) -> Result<Term> {
   let str_size = reader.read_uint::<NetworkEndian>(USIZE_BYTES)?;
 
   let mut buf = vec![0u8; str_size as usize];
@@ -102,9 +103,21 @@ fn decode_string(reader: &mut BufReader<&[u8]>) -> Result<Term> {
   }
 }
 
-fn decode_tuple(reader: &mut BufReader<&[u8]>) -> Result<Term> {
+fn decode_tuple(reader: &mut impl Read) -> Result<Term> {
   let p0 = do_decode(reader)?;
   let p1 = do_decode(reader)?;
 
   Ok(Term::Tuple(Box::new(p0), Box::new(p1)))
+}
+
+impl Encode for Term {
+  fn encode(&self) -> std::io::Result<Vec<u8>> {
+    encode(self)
+  }
+}
+
+impl Decode for Term {
+  fn decode(rd: &mut impl Read) -> std::io::Result<Self> {
+    do_decode(rd)
+  }
 }

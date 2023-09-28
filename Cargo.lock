@@ -16,10 +16,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "termstorage-encoding"
+version = "0.1.0"
+
+[[package]]
 name = "termstorage-protocol"
 version = "0.1.0"
 dependencies = [
  "byteorder",
+ "termstorage-encoding",
  "termstorage-term",
 ]
 
@@ -37,4 +42,5 @@ name = "termstorage-term"
 version = "0.1.0"
 dependencies = [
  "byteorder",
+ "termstorage-encoding",
 ]

@@ -2,6 +2,7 @@ pub mod response;
 
 use std::io::{self, Read, Result, Write};
 
+use termstorage_encoding::{Decode, Encode};
 use termstorage_term::{self, Term};
 
 use byteorder::{NetworkEndian, ReadBytesExt, WriteBytesExt};
@@ -46,7 +47,7 @@ pub fn encode(prot: Protocol) -> Result<Vec<u8>> {
       buf.write_u8(TAG_SET)?;
       write_name(&name, &mut buf)?;
 
-      let payload = termstorage_term::encode(&payload)?;
+      let payload = payload.encode()?;
       let payload_size = payload.len().to_be_bytes();
 
       buf.write(&payload_size)?;
@@ -80,7 +81,7 @@ pub fn decode(reader: &mut impl Read) -> Result<Protocol> {
       let mut buf_payload = vec![0u8; payload_size as usize];
       reader.read_exact(&mut buf_payload)?;
 
-      let payload = termstorage_term::decode(&buf_payload)?;
+      let payload = Term::decode(&mut buf_payload.as_slice())?;
 
       let prot = Set { name, payload };
       Ok(Protocol::Set(prot))

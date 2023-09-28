@@ -1,3 +1,4 @@
+use termstorage_encoding::Decode;
 use termstorage_term::Term;
 
 use std::io::{self, Read, Result, Write};
@@ -52,7 +53,7 @@ pub fn decode(reader: &mut impl Read) -> Result<Response> {
       let mut payload_buf = vec![0u8; payload_size as usize];
       reader.read_exact(&mut payload_buf)?;
 
-      let term = termstorage_term::decode(&payload_buf)?;
+      let term = Term::decode(&mut payload_buf.as_slice())?;
 
       Ok(Response::Ok(term))
     }
