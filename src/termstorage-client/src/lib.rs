@@ -3,6 +3,7 @@ use std::{
   net::{TcpStream, ToSocketAddrs},
 };
 
+use termstorage_encoding::{Decode, Encode};
 use termstorage_protocol::{response::Response, Protocol};
 
 pub struct Client<Addr: ToSocketAddrs>(Addr);
@@ -15,10 +16,10 @@ impl<Addr: ToSocketAddrs> Client<Addr> {
   pub fn send(&self, prot: Protocol) -> Result<Response> {
     let mut stream = TcpStream::connect(&self.0)?;
 
-    let req = termstorage_protocol::encode(prot.into())?;
+    let req = prot.encode()?;
     stream.write_all(&req)?;
 
-    let resp = termstorage_protocol::response::decode(&mut stream)?;
+    let resp = Response::decode(&mut stream)?;
 
     std::mem::drop(stream);
 

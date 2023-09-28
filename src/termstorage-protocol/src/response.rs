@@ -1,4 +1,4 @@
-use termstorage_encoding::Decode;
+use termstorage_encoding::{Decode, Encode};
 use termstorage_term::Term;
 
 use std::io::{self, Read, Result, Write};
@@ -14,6 +14,18 @@ pub enum Response {
   ServerError,
 }
 
+impl Encode for Response {
+  fn encode(&self) -> std::io::Result<Vec<u8>> {
+    encode(self)
+  }
+}
+
+impl Decode for Response {
+  fn decode(rd: &mut impl Read) -> std::io::Result<Self> {
+    decode(rd)
+  }
+}
+
 const TAG_OK: u8 = 50;
 const TAG_PROCESSED: u8 = 51;
 const TAG_NOT_FOUND: u8 = 52;
@@ -22,7 +34,7 @@ const TAG_SERVER_ERROR: u8 = 54;
 
 const USIZE_BYTES: usize = 8;
 
-pub fn encode(resp: Response) -> Result<Vec<u8>> {
+fn encode(resp: &Response) -> Result<Vec<u8>> {
   let mut buf = Vec::new();
 
   match resp {
@@ -43,7 +55,7 @@ pub fn encode(resp: Response) -> Result<Vec<u8>> {
   Ok(buf)
 }
 
-pub fn decode(reader: &mut impl Read) -> Result<Response> {
+fn decode(reader: &mut impl Read) -> Result<Response> {
   let tag = reader.read_u8()?;
 
   match tag {

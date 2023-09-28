@@ -5,6 +5,7 @@ use std::{
   thread,
 };
 
+use termstorage_encoding::{Decode, Encode};
 use termstorage_protocol::{response::Response, Delete, Fetch, Protocol, Set};
 use termstorage_term::Term;
 
@@ -28,7 +29,7 @@ impl Server {
       let accept = self.listener.accept();
       match accept {
         Ok((mut stream, _)) => {
-          let req = termstorage_protocol::decode(&mut stream);
+          let req = Protocol::decode(&mut stream);
           match req {
             Ok(prot) => self.handle(&mut stream, prot).unwrap(),
             Err(_) => self.unprocessed(&mut stream).unwrap(),
@@ -50,7 +51,7 @@ impl Server {
       Protocol::Delete(delete) => self.handle_delete(delete),
     };
 
-    let encoded_resp = termstorage_protocol::response::encode(resp)?;
+    let encoded_resp = resp.encode()?;
     stream.write(&encoded_resp)?;
 
     Ok(())
@@ -75,8 +76,8 @@ impl Server {
   }
 
   fn unprocessed(&self, stream: &mut TcpStream) -> std::io::Result<()> {
-    let resp = termstorage_protocol::response::encode(Response::Unprocessed)?;
-    stream.write(&resp)?;
+    let res = Response::Unprocessed.encode()?;
+    stream.write(&res)?;
 
     Ok(())
   }

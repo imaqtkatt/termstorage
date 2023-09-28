@@ -9,3 +9,4 @@ edition = "2021"
 termstorage-protocol = { path = "../termstorage-protocol" }
 termstorage-term = { path = "../termstorage-term" }
 termstorage-client = { path = "../termstorage-client" }
+termstorage-encoding = { path = "../termstorage-encoding" }

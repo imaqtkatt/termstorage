@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 termstorage-protocol = { path = "../termstorage-protocol" }
+termstorage-encoding = { path = "../termstorage-encoding" }

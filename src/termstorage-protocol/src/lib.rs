@@ -30,12 +30,24 @@ pub enum Protocol {
   Delete(Delete),
 }
 
+impl Encode for Protocol {
+  fn encode(&self) -> std::io::Result<Vec<u8>> {
+    encode(self)
+  }
+}
+
+impl Decode for Protocol {
+  fn decode(rd: &mut impl Read) -> std::io::Result<Self> {
+    decode(rd)
+  }
+}
+
 const TAG_FETCH: u8 = 10;
 const TAG_SET: u8 = 11;
 const TAG_DELETE: u8 = 12;
 
 /// Encodes the given Protocol.
-pub fn encode(prot: Protocol) -> Result<Vec<u8>> {
+fn encode(prot: &Protocol) -> Result<Vec<u8>> {
   let mut buf = Vec::new();
 
   match prot {
@@ -63,7 +75,7 @@ pub fn encode(prot: Protocol) -> Result<Vec<u8>> {
 }
 
 /// Decodes a Protocol with the given reader.
-pub fn decode(reader: &mut impl Read) -> Result<Protocol> {
+fn decode(reader: &mut impl Read) -> Result<Protocol> {
   let tag = reader.read_u8()?;
 
   match tag {
