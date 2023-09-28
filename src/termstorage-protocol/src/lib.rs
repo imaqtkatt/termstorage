@@ -120,3 +120,21 @@ fn read_name(reader: &mut impl Read) -> Result<String> {
     Err(err)
   })
 }
+
+impl Into<Protocol> for Fetch {
+  fn into(self) -> Protocol {
+    Protocol::Fetch(self)
+  }
+}
+
+impl Into<Protocol> for Set {
+  fn into(self) -> Protocol {
+    Protocol::Set(self)
+  }
+}
+
+impl Into<Protocol> for Delete {
+  fn into(self) -> Protocol {
+    Protocol::Delete(self)
+  }
+}

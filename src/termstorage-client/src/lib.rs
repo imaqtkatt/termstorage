@@ -15,7 +15,7 @@ impl<Addr: ToSocketAddrs> Client<Addr> {
   pub fn send(&self, prot: Protocol) -> Result<Response> {
     let mut stream = TcpStream::connect(&self.0)?;
 
-    let req = termstorage_protocol::encode(prot)?;
+    let req = termstorage_protocol::encode(prot.into())?;
     stream.write_all(&req)?;
 
     let resp = termstorage_protocol::response::decode(&mut stream)?;
