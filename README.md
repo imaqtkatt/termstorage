@@ -1,6 +1,6 @@
 # Termstorage
 
-\# _Termstorage - The best worse minimal database._
+\# _Termstorage - The best worst minimal database._
 
 Termstorage is a server that can store **terms**, it has a simple protocol and term encoding/serialization.
 
@@ -51,11 +51,28 @@ We have the following byte representation of all terms:
 
 ## Protocol
 
-As you may know, you are using the HTTP protocol to read this page on GitHub.
+<!-- As you may know, you are using the HTTP protocol to read this page on GitHub. -->
 
-A protocol models data to be transferred across the network.
+<!-- A protocol models data to be transferred across the network. -->
 
-Termstorage's protocol has 3 **operations**:
+A protocol is a set of established rules that dictates communication between systems.
+
+Consider the current server state:
+
+```rs
+{
+     "rust" -> String("ferris");
+  "nightly" -> Bool(true);
+}
+```
+
+What should happen if someone sends 2 requests, one fetching for **"cargo"** and other deleting **"rust"**?
+
+Probably, we need to warn who are sending these requests that:
+- "cargo" was **not found**.
+- "rust" was deleted successfully, a **processed** operation.
+
+Termstorage's protocol has 3 **operations**/**requests**:
 
 ```rs
 enum Protocol {
@@ -81,15 +98,15 @@ Same as term encoding, we use a byte tag to represent the request/response type 
 
 ```rs
 // Requests
-const TAG_FETCH: u8 = 10;
-const TAG_SET: u8 = 11;
+const TAG_FETCH: u8  = 10;
+const TAG_SET: u8    = 11;
 const TAG_DELETE: u8 = 12;
 
 // Responses
-const TAG_OK: u8 = 50;
-const TAG_PROCESSED: u8 = 51;
-const TAG_NOT_FOUND: u8 = 52;
-const TAG_UNPROCESSED: u8 = 53;
+const TAG_OK: u8           = 50;
+const TAG_PROCESSED: u8    = 51;
+const TAG_NOT_FOUND: u8    = 52;
+const TAG_UNPROCESSED: u8  = 53;
 const TAG_SERVER_ERROR: u8 = 54;
 ```
 
